@@ -1,8 +1,8 @@
 # 資訊收集平台 開發規格書
 
-**版本**：v1.1  
+**版本**：v1.2  
 **日期**：2026-05-31  
-**形式**：本機個人工具（瀏覽器操作，資料存於本機）
+**形式**：本機個人工具（ASP.NET Core MVC，瀏覽器操作，資料存於本機）
 
 ---
 
@@ -10,12 +10,13 @@
 
 ### 1.1 目標
 
-建構一個在本機執行的資訊收集小工具。執行一個指令後用瀏覽器開啟，即可管理、分類、搜尋自己收集的各類資料，並附上來源網址或出處以供日後查證。
+建構一個在本機執行的資訊收集小工具，使用熟悉的 **C# ASP.NET Core MVC** 架構開發。執行後用瀏覽器開啟，即可管理、分類、搜尋自己收集的各類資料，並附上來源網址或出處以供日後查證。
 
 ### 1.2 核心特點
 
-- **零部署負擔**：只需 `python app.py`，瀏覽器自動開啟
-- **資料可攜**：所有資料存在一個 `data.db` 檔，複製即可備份
+- **熟悉架構**：標準 MVC 分層，Controller / Model / View 對應清楚
+- **零部署負擔**：`dotnet run` 或直接執行 `.exe` 即可啟動
+- **資料可攜**：所有資料存在本機 SQLite `.db` 檔，複製即備份
 - **無需帳號**：個人使用，無登入機制
 - **雙軸分類**：資料類別 × 資訊種類，兩個維度自由組合
 - **來源強制**：每筆資料必須附上網址或出處
@@ -24,9 +25,9 @@
 
 ## 2. 功能需求
 
-### 2.1 資料類別（Data Type）
+### 2.1 資料類別（DataType）
 
-可自由新增 / 修改，系統預設：
+可在設定頁自由新增 / 修改，系統預設：
 
 | 類別 | 說明 |
 |---|---|
@@ -42,77 +43,68 @@
 
 ### 2.2 資訊種類（Topic）
 
-支援樹狀層級（主題 → 子主題），可自由新增，系統預設：
+支援樹狀層級（主題 → 子主題），可在設定頁自由新增，系統預設：
 
 ```
 機器人
   ├─ 工業機器人
   ├─ 協作機器人
   └─ 無人機
-
 紡織
   ├─ 智慧紡織
   ├─ 功能性纖維
   └─ 染整製程
-
 材料
   ├─ 複合材料
   ├─ 奈米材料
   └─ 生醫材料
-
 化工
   ├─ 高分子
   ├─ 觸媒
   └─ 製程工程
-
 AI / 機器學習
   ├─ 自然語言處理
   ├─ 電腦視覺
   └─ 強化學習
-
-能源
-  ├─ 太陽能
-  ├─ 氫能
-  └─ 儲能
-
-生醫
-  ├─ 醫療器材
-  ├─ 藥物開發
-  └─ 基因工程
+能源 / 生醫（依此類推）
 ```
 
 ### 2.3 資料項目欄位
 
-| 欄位 | 必填 | 說明 |
-|---|---|---|
-| 標題 | ✅ | 資料標題 |
-| 摘要 | ❌ | 重點節錄 |
-| 資料類別 | ✅ | 至少一個（可多選）|
-| 資訊種類 | ✅ | 至少一個（可多選）|
-| 來源網址 | 條件必填 | 與「出處說明」擇一必填 |
-| 出處說明 | 條件必填 | 期刊名 / 書名 / 報社等 |
-| 作者 / 單位 | ❌ | |
-| 發布日期 | ❌ | |
-| 標籤 | ❌ | 自由文字標籤，逗號分隔 |
-| 備註 | ❌ | 個人筆記 |
-| 建立時間 | 自動 | 系統填入 |
+| 欄位 | C# 屬性名稱 | 必填 | 說明 |
+|---|---|---|---|
+| 標題 | `Title` | ✅ | 最長 500 字 |
+| 摘要 | `Summary` | ❌ | 重點節錄 |
+| 來源網址 | `SourceUrl` | 條件必填 | 與 `SourceRef` 擇一必填 |
+| 出處說明 | `SourceRef` | 條件必填 | 期刊名 / 書名 / 報社 |
+| 頁碼 / 章節 | `SourcePage` | ❌ | |
+| 作者 / 單位 | `Author` | ❌ | |
+| 發布日期 | `PublishedAt` | ❌ | `DateTime?` |
+| 標籤 | `Tags` | ❌ | 逗號分隔字串 |
+| 備註 | `Notes` | ❌ | 個人筆記 |
+| 資料類別 | `DataTypes` | ✅ | 多對多，至少一個 |
+| 資訊種類 | `Topics` | ✅ | 多對多，至少一個 |
+| 建立時間 | `CreatedAt` | 自動 | `DateTime` |
+| 更新時間 | `UpdatedAt` | 自動 | `DateTime` |
 
-> **驗證規則**：來源網址與出處說明至少填一項，否則無法儲存。
+> **驗證規則**：`SourceUrl` 與 `SourceRef` 兩者皆空時，Model Validation 回傳錯誤，拒絕儲存。
 
 ### 2.4 搜尋與篩選
 
-- 關鍵字搜尋（比對標題、摘要、標籤、備註）
-- 依資料類別篩選（多選）
-- 依資訊種類篩選（多選，含子主題）
+- 關鍵字搜尋（比對 Title、Summary、Tags、Notes）
+- 依資料類別篩選（多選 checkbox）
+- 依資訊種類篩選（多選，含子主題向下展開）
 - 依發布日期區間篩選
-- 排序：建立時間（新→舊）、發布日期、標題
+- 排序：建立時間（新→舊）、發布日期、標題字母順序
 
 ### 2.5 其他功能
 
-- **URL 快速填入**：貼上網址後自動嘗試擷取標題（可手動覆蓋）
-- **批次匯入**：上傳 CSV 檔新增多筆資料
-- **匯出**：將篩選結果匯出為 CSV 或 JSON
-- **類別 / 主題管理**：在設定頁新增 / 修改 / 刪除類別與主題
+| 功能 | 說明 |
+|---|---|
+| URL 快速填入 | 貼入網址後 AJAX 呼叫後端自動擷取標題（可手動覆蓋）|
+| 批次匯入 | 上傳 CSV 檔，欄位對應後批次新增 |
+| 匯出 | 將篩選結果匯出為 CSV 或 JSON |
+| 設定頁 | 管理資料類別與資訊種類（新增 / 修改 / 停用）|
 
 ---
 
@@ -122,164 +114,322 @@ AI / 機器學習
 
 | 層級 | 技術 | 說明 |
 |---|---|---|
-| 後端 | **Python 3.11 + FastAPI** | 輕量、自帶 API 文件 |
-| 資料庫 | **SQLite（單一 .db 檔）** | 免安裝、易備份 |
-| ORM | **SQLModel** | FastAPI 原生搭配，同時做資料驗證 |
-| 前端 | **HTML + Alpine.js + Tailwind CSS（CDN）** | 免打包、直接用瀏覽器跑 |
-| URL 擷取 | **httpx + BeautifulSoup4** | 抓取網頁 meta 資訊 |
-| 啟動 | **uvicorn** | `python app.py` 一行啟動 |
+| 框架 | **ASP.NET Core 8 MVC** | 標準 MVC 架構，Razor Views |
+| 語言 | **C# 12** | |
+| ORM | **Entity Framework Core 8** | Code First，Migrations |
+| 資料庫 | **SQLite**（`Microsoft.EntityFrameworkCore.Sqlite`）| 本機單一 `.db` 檔，免安裝 DB Server |
+| 前端 | **Bootstrap 5 + jQuery** | 隨 ASP.NET Core 預設範本，熟悉 |
+| URL 擷取 | **HttpClient + HtmlAgilityPack** | 抓取網頁 `<title>` / meta 資訊 |
+| 驗證 | **Data Annotations + Tag Helpers** | 伺服器端 + 前端雙重驗證 |
+| 啟動 | **`dotnet run`** | 或直接 publish 成 `.exe` |
 
 ### 3.2 專案目錄結構
 
 ```
 DataCollectionPlatform/
-├── app.py               # 入口：啟動 FastAPI + 自動開啟瀏覽器
-├── database.py          # SQLite 連線、資料表初始化
-├── models.py            # SQLModel 資料模型
-├── routers/
-│   ├── items.py         # 資料 CRUD API
-│   ├── types.py         # 資料類別管理 API
-│   ├── topics.py        # 資訊種類管理 API
-│   └── utils.py         # URL 擷取 API
-├── static/
-│   └── app.js           # 前端互動邏輯（Alpine.js）
-├── templates/
-│   ├── index.html       # 列表 / 搜尋頁
-│   ├── form.html        # 新增 / 編輯頁
-│   ├── detail.html      # 詳情頁
-│   └── settings.html    # 類別 / 主題管理
-├── data.db              # SQLite 資料庫（自動產生）
-└── requirements.txt
+├── Controllers/
+│   ├── HomeController.cs          # 首頁 / 儀表板
+│   ├── ItemsController.cs         # 資料 CRUD + 搜尋
+│   ├── SettingsController.cs      # 類別 / 主題管理
+│   └── ApiController.cs           # AJAX 端點（URL 擷取、匯入匯出）
+│
+├── Models/
+│   ├── Item.cs                    # 資料主表 Entity
+│   ├── DataType.cs                # 資料類別 Entity
+│   ├── Topic.cs                   # 資訊種類 Entity（樹狀）
+│   ├── ItemDataType.cs            # 多對多關聯表
+│   ├── ItemTopic.cs               # 多對多關聯表
+│   └── ViewModels/
+│       ├── ItemIndexViewModel.cs  # 列表頁（含篩選條件）
+│       ├── ItemFormViewModel.cs   # 新增 / 編輯表單
+│       └── ItemDetailViewModel.cs # 詳情頁
+│
+├── Data/
+│   └── AppDbContext.cs            # DbContext + Seed 預設資料
+│
+├── Services/
+│   ├── IUrlFetchService.cs
+│   ├── UrlFetchService.cs         # HttpClient 擷取網頁標題
+│   ├── IImportExportService.cs
+│   └── ImportExportService.cs     # CSV 匯入 / 匯出邏輯
+│
+├── Views/
+│   ├── Items/
+│   │   ├── Index.cshtml           # 列表 + 篩選
+│   │   ├── Create.cshtml          # 新增表單
+│   │   ├── Edit.cshtml            # 編輯表單
+│   │   └── Detail.cshtml          # 詳情
+│   ├── Settings/
+│   │   ├── Index.cshtml           # 類別 / 主題管理
+│   │   └── _TopicTree.cshtml      # 樹狀主題元件（partial）
+│   └── Shared/
+│       ├── _Layout.cshtml
+│       └── _FilterPanel.cshtml    # 左側篩選面板（partial）
+│
+├── wwwroot/
+│   ├── css/site.css
+│   └── js/site.js                 # URL 自動擷取、樹狀展開邏輯
+│
+├── Migrations/                    # EF Core 自動產生
+├── appsettings.json               # 連線字串（SQLite 路徑）
+├── Program.cs
+└── DataCollectionPlatform.csproj
 ```
 
-### 3.3 資料庫 Schema（SQLite）
+### 3.3 資料模型（C# Entity）
 
-```sql
--- 資料類別
-CREATE TABLE data_types (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    name       TEXT NOT NULL UNIQUE,
-    is_active  INTEGER DEFAULT 1
-);
+```csharp
+// Models/Item.cs
+public class Item
+{
+    public int Id { get; set; }
 
--- 資訊種類（樹狀）
-CREATE TABLE topics (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    name       TEXT NOT NULL,
-    parent_id  INTEGER REFERENCES topics(id),
-    is_active  INTEGER DEFAULT 1
-);
+    [Required, StringLength(500)]
+    public string Title { get; set; } = "";
 
--- 資料主表
-CREATE TABLE items (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    title        TEXT NOT NULL,
-    summary      TEXT,
-    source_url   TEXT,
-    source_ref   TEXT,
-    author       TEXT,
-    published_at TEXT,
-    tags         TEXT,   -- 逗號分隔字串
-    notes        TEXT,
-    created_at   TEXT DEFAULT (datetime('now','localtime')),
-    updated_at   TEXT DEFAULT (datetime('now','localtime')),
-    -- 來源至少一項必填（應用層驗證）
-    CHECK (source_url IS NOT NULL OR source_ref IS NOT NULL)
-);
+    public string? Summary { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? SourceRef { get; set; }
+    public string? SourcePage { get; set; }
+    public string? Author { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    public string? Tags { get; set; }       // 逗號分隔
+    public string? Notes { get; set; }
 
--- 資料 ↔ 類別（多對多）
-CREATE TABLE item_data_types (
-    item_id      INTEGER REFERENCES items(id) ON DELETE CASCADE,
-    data_type_id INTEGER REFERENCES data_types(id),
-    PRIMARY KEY (item_id, data_type_id)
-);
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
--- 資料 ↔ 主題（多對多）
-CREATE TABLE item_topics (
-    item_id  INTEGER REFERENCES items(id) ON DELETE CASCADE,
-    topic_id INTEGER REFERENCES topics(id),
-    PRIMARY KEY (item_id, topic_id)
-);
+    // Navigation properties
+    public ICollection<ItemDataType> ItemDataTypes { get; set; } = [];
+    public ICollection<ItemTopic> ItemTopics { get; set; } = [];
+}
+
+// Models/DataType.cs
+public class DataType
+{
+    public int Id { get; set; }
+
+    [Required, StringLength(100)]
+    public string Name { get; set; } = "";
+
+    public bool IsActive { get; set; } = true;
+    public ICollection<ItemDataType> ItemDataTypes { get; set; } = [];
+}
+
+// Models/Topic.cs
+public class Topic
+{
+    public int Id { get; set; }
+
+    [Required, StringLength(200)]
+    public string Name { get; set; } = "";
+
+    public int? ParentId { get; set; }
+    public Topic? Parent { get; set; }
+    public ICollection<Topic> Children { get; set; } = [];
+    public bool IsActive { get; set; } = true;
+    public ICollection<ItemTopic> ItemTopics { get; set; } = [];
+}
+
+// Models/ItemDataType.cs（多對多）
+public class ItemDataType
+{
+    public int ItemId { get; set; }
+    public Item Item { get; set; } = null!;
+    public int DataTypeId { get; set; }
+    public DataType DataType { get; set; } = null!;
+}
+
+// Models/ItemTopic.cs（多對多）
+public class ItemTopic
+{
+    public int ItemId { get; set; }
+    public Item Item { get; set; } = null!;
+    public int TopicId { get; set; }
+    public Topic Topic { get; set; } = null!;
+}
 ```
 
-### 3.4 API 端點
+### 3.4 自訂驗證（來源必填）
 
+```csharp
+// 自訂 Validation Attribute，套用在 ItemFormViewModel
+public class SourceRequiredAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext ctx)
+    {
+        var vm = (ItemFormViewModel)ctx.ObjectInstance;
+        if (string.IsNullOrWhiteSpace(vm.SourceUrl) &&
+            string.IsNullOrWhiteSpace(vm.SourceRef))
+        {
+            return new ValidationResult("來源網址或出處說明至少填寫一項");
+        }
+        return ValidationResult.Success;
+    }
+}
 ```
-# 資料
-GET    /api/items              列表（?q=&type=&topic=&page=）
-POST   /api/items              新增
-GET    /api/items/{id}         取得單筆
-PUT    /api/items/{id}         更新
-DELETE /api/items/{id}         刪除
-GET    /api/items/export       匯出 CSV / JSON
-POST   /api/items/import       批次匯入 CSV
 
-# 工具
-POST   /api/fetch-url          { url } → 返回自動擷取的標題
+### 3.5 DbContext
 
-# 資料類別
-GET    /api/data-types
-POST   /api/data-types
-PUT    /api/data-types/{id}
-DELETE /api/data-types/{id}
+```csharp
+// Data/AppDbContext.cs
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<Item> Items => Set<Item>();
+    public DbSet<DataType> DataTypes => Set<DataType>();
+    public DbSet<Topic> Topics => Set<Topic>();
+    public DbSet<ItemDataType> ItemDataTypes => Set<ItemDataType>();
+    public DbSet<ItemTopic> ItemTopics => Set<ItemTopic>();
 
-# 資訊種類
-GET    /api/topics             返回樹狀結構
-POST   /api/topics
-PUT    /api/topics/{id}
-DELETE /api/topics/{id}
+    protected override void OnModelCreating(ModelBuilder mb)
+    {
+        mb.Entity<ItemDataType>().HasKey(x => new { x.ItemId, x.DataTypeId });
+        mb.Entity<ItemTopic>().HasKey(x => new { x.ItemId, x.TopicId });
+
+        // Seed 預設資料類別
+        mb.Entity<DataType>().HasData(
+            new DataType { Id = 1, Name = "文章" },
+            new DataType { Id = 2, Name = "新聞" },
+            new DataType { Id = 3, Name = "論文" },
+            new DataType { Id = 4, Name = "報告" },
+            new DataType { Id = 5, Name = "專利" },
+            new DataType { Id = 6, Name = "標準規範" },
+            new DataType { Id = 7, Name = "書籍" },
+            new DataType { Id = 8, Name = "影音" },
+            new DataType { Id = 9, Name = "其他" }
+        );
+
+        // Seed 預設資訊種類（部分示範）
+        mb.Entity<Topic>().HasData(
+            new Topic { Id = 1, Name = "機器人",     ParentId = null },
+            new Topic { Id = 2, Name = "工業機器人", ParentId = 1 },
+            new Topic { Id = 3, Name = "協作機器人", ParentId = 1 },
+            new Topic { Id = 4, Name = "紡織",       ParentId = null },
+            new Topic { Id = 5, Name = "智慧紡織",   ParentId = 4 }
+            // ... 其餘依此類推
+        );
+    }
+}
+```
+
+### 3.6 Program.cs 設定
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+builder.Services.AddHttpClient<IUrlFetchService, UrlFetchService>();
+builder.Services.AddScoped<IImportExportService, ImportExportService>();
+
+var app = builder.Build();
+
+// 啟動時自動套用 Migration
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+}
+
+app.UseStaticFiles();
+app.UseRouting();
+app.MapControllerRoute("default", "{controller=Items}/{action=Index}/{id?}");
+
+// 開發時自動開啟瀏覽器
+if (app.Environment.IsDevelopment())
+{
+    Task.Run(() =>
+    {
+        System.Threading.Thread.Sleep(1500);
+        var url = "http://localhost:5000";
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    });
+}
+
+app.Run();
+```
+
+### 3.7 appsettings.json
+
+```json
+{
+  "ConnectionStrings": {
+    "Default": "Data Source=data.db"
+  },
+  "Urls": "http://localhost:5000"
+}
 ```
 
 ---
 
 ## 4. 使用者介面
 
-### 4.1 列表頁（首頁）
+### 4.1 列表頁（Items/Index）
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  資訊收集平台                      [+ 新增] [設定]  │
 ├──────────────┬──────────────────────────────────────┤
-│              │  🔍 搜尋...                [匯出▼]   │
+│              │  🔍 [搜尋關鍵字...]      [匯出 CSV]  │
 │ 資料類別     ├──────────────────────────────────────┤
-│ □ 全部       │                                      │
-│ ■ 文章 (12)  │  機器人視覺系統最新進展              │
-│ □ 新聞  (8)  │  [論文] [機器人 > 工業機器人]        │
-│ □ 論文  (5)  │  https://example.com   2026-03-15    │
-│              │  ─────────────────────────────────── │
-│ 資訊種類     │  功能性紡織品市場報告                │
-│ ▶ 機器人     │  [報告] [紡織 > 功能性纖維]          │
-│ ▼ 紡織       │  出處：紡織產業綜合研究所  2025-12   │
-│   ■ 智慧紡織 │                                      │
-│   □ 染整     │         [ 1  2  3 … ]                │
+│ □ 全部       │  機器人視覺系統最新進展              │
+│ ■ 文章 (12)  │  [論文][機器人 > 工業機器人]         │
+│ □ 新聞  (8)  │  🔗 https://...   作者：王小明        │
+│ □ 論文  (5)  │  2026-03-15  ─────────────────────── │
+│              │  功能性紡織品市場報告 2025            │
+│ 資訊種類     │  [報告][紡織 > 功能性纖維]           │
+│ ▶ 機器人     │  出處：紡織產業綜合研究所            │
+│ ▼ 紡織       │                                      │
+│   ■ 智慧紡織 │         [ ← 1  2  3 → ]              │
+│   □ 染整     │                                      │
 │ ▶ 材料       │                                      │
 └──────────────┴──────────────────────────────────────┘
 ```
 
-### 4.2 新增 / 編輯頁
+### 4.2 新增 / 編輯頁（Items/Create, Edit）
 
-- 頂部「貼上網址」欄位，按 Enter 自動填入標題
-- 資料類別：多選 Checkbox
-- 資訊種類：樹狀多選（展開 / 收合）
-- 來源網址 / 出處說明至少一項，若都空白顯示紅色提示
+- 頂部「貼上網址」欄位：失焦時 AJAX 呼叫 `/api/fetch-url`，自動填入標題
+- 資料類別：`CheckBoxList`（Partial View）
+- 資訊種類：樹狀展開多選（`<ul>` 巢狀結構 + jQuery toggle）
+- 來源網址 / 出處：前端 JavaScript 額外驗證，提交前確認至少填一項
+- 使用 Bootstrap 5 表單 layout，Tag Helpers 處理驗證訊息
 
-### 4.3 詳情頁
+### 4.3 詳情頁（Items/Detail）
 
-- 顯示所有欄位
-- 來源網址旁有「開啟連結」按鈕
-- 右上角「編輯」「刪除」按鈕
+- 完整顯示所有欄位與標籤
+- 來源網址旁「開啟連結」按鈕（`target="_blank"`）
+- 右上角「編輯」「刪除」按鈕（刪除以 Modal 確認）
+
+### 4.4 設定頁（Settings/Index）
+
+- 左側 Tab：資料類別管理 / 資訊種類管理
+- 資料類別：簡易列表 + 新增 / 修改 / 停用（Bootstrap inline form）
+- 資訊種類：樹狀結構 + 新增子主題 / 修改名稱 / 停用
 
 ---
 
-## 5. 啟動方式（最終目標）
+## 5. 啟動與部署
+
+### 開發執行
 
 ```bash
-# 第一次使用
-pip install -r requirements.txt
+cd DataCollectionPlatform
+dotnet run
+# 瀏覽器自動開啟 http://localhost:5000
+```
 
-# 每次啟動（自動開啟瀏覽器）
-python app.py
-# → 瀏覽器自動開啟 http://localhost:8000
+### 發行成單一執行檔（選用）
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+# 產出 DataCollectionPlatform.exe，雙擊即可執行
+```
+
+### 資料備份
+
+```bash
+# 只需複製 data.db 即可備份所有資料
+copy data.db backup\data_20260531.db
 ```
 
 ---
@@ -287,34 +437,48 @@ python app.py
 ## 6. 開發階段規劃
 
 ### Phase 1（核心功能，約 2 週）
-- [ ] 資料庫初始化與預設資料（類別、主題）
-- [ ] 資料 CRUD API
-- [ ] 基本列表、新增、編輯、詳情頁面
-- [ ] 分類篩選與關鍵字搜尋
-- [ ] 來源欄位必填驗證
+
+- [ ] 建立 ASP.NET Core MVC 專案、安裝套件
+- [ ] Entity + DbContext + Migration + Seed 預設資料
+- [ ] Items CRUD（Index / Create / Edit / Detail / Delete）
+- [ ] 來源欄位自訂驗證
+- [ ] 左側分類篩選面板（DataType + Topic）
+- [ ] 關鍵字搜尋
 
 ### Phase 2（體驗優化，約 1 週）
-- [ ] URL 自動擷取標題
-- [ ] 類別 / 主題管理設定頁
-- [ ] CSV 匯入 / 匯出
+
+- [ ] URL 自動擷取標題（HttpClient + HtmlAgilityPack）
+- [ ] Settings 頁：資料類別 / 資訊種類 CRUD
+- [ ] CSV 匯入 / 匯出（CsvHelper 套件）
 - [ ] 啟動時自動開啟瀏覽器
 
-### Phase 3（加分功能，視需求）
-- [ ] 全文搜尋加強（FTS5）
-- [ ] 資料統計儀表板
-- [ ] 附件上傳（PDF、圖片）
-- [ ] 匯出 Markdown / JSON
+### Phase 3（加分，視需求）
+
+- [ ] 全文搜尋強化（EF.Functions.Like 多欄位）
+- [ ] 統計儀表板（各類別數量長條圖）
+- [ ] 附件上傳（PDF / 圖片，存於本機資料夾）
 
 ---
 
-## 7. 驗收標準
+## 7. 主要 NuGet 套件
 
-1. `python app.py` 即可啟動，無需額外設定
-2. 每筆資料必須包含至少一個類別、一個主題、一個來源（網址或出處），否則拒絕儲存
-3. 類別與主題可在設定頁自由新增，無需改程式碼
+| 套件 | 用途 |
+|---|---|
+| `Microsoft.EntityFrameworkCore.Sqlite` | SQLite 資料庫 |
+| `Microsoft.EntityFrameworkCore.Tools` | Migrations CLI |
+| `HtmlAgilityPack` | 擷取網頁標題 |
+| `CsvHelper` | CSV 匯入 / 匯出 |
+
+---
+
+## 8. 驗收標準
+
+1. `dotnet run` 即可啟動，無需額外安裝資料庫
+2. 每筆資料必須包含至少一個類別、一個主題、一個來源（網址或出處），否則 Model Validation 拒絕儲存
+3. 類別與主題可在設定頁自由新增，無需改程式碼或重新編譯
 4. 可用類別 + 主題 + 關鍵字進行複合篩選
 5. 所有資料可匯出為 CSV 備份
 
 ---
 
-*本規格書確定後即可開始實作 Phase 1。*
+*規格書確認後即可開始實作 Phase 1。*
