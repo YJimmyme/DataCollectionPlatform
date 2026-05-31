@@ -80,10 +80,10 @@
                        value="@Model.Query" />
             </div>
 
-            <select class="form-select form-select-sm" style="width:auto" id="sortSelect" name="SortBy">
-                <option value="created_desc" @(Model.SortBy == "created_desc" ? "selected" : "")>建立時間（新→舊）</option>
-                <option value="published_desc" @(Model.SortBy == "published_desc" ? "selected" : "")>發布日期（新→舊）</option>
-                <option value="title" @(Model.SortBy == "title" ? "selected" : "")>標題字母順序</option>
+            <select asp-for="SortBy" class="form-select form-select-sm" style="width:auto" id="sortSelect">
+                <option value="created_desc">建立時間（新→舊）</option>
+                <option value="published_desc">發布日期（新→舊）</option>
+                <option value="title">標題字母順序</option>
             </select>
 
             <div class="ms-auto d-flex gap-2">

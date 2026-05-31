@@ -112,9 +112,9 @@ public class EmailService(AppDbContext db) : IEmailService
 
     private static string Trunc(string s, int max) =>
         s.Length > max ? s[..max] + "…" : s;
-}
 
-file record EmailConfig(
-    string SmtpHost, int SmtpPort,
-    string Username, string Password,
-    string FromAddress, string ToAddresses);
+    private record EmailConfig(
+        string SmtpHost, int SmtpPort,
+        string Username, string Password,
+        string FromAddress, string ToAddresses);
+}
