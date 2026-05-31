@@ -1,0 +1,34 @@
+<script>
+    // URL 自動擷取
+    function fetchUrl() {
+        var url = $('#autoFillUrl').val().trim();
+        if (!url) return;
+        $('#fetchStatus').html('<span class="text-muted"><i class="bi bi-hourglass-split"></i> 擷取中…</span>');
+        $.ajax({
+            url: '/api/fetch-url',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ url: url }),
+            success: function(data) {
+                if (data.title) {
+                    $('#Title').val(data.title);
+                    $('#fetchStatus').html('<span class="text-success"><i class="bi bi-check-circle"></i> 標題已填入</span>');
+                }
+                if (data.description && !$('textarea[name=Summary]').val())
+                    $('textarea[name=Summary]').val(data.description);
+                if (data.author && !$('#Author').val())
+                    $('#Author').val(data.author);
+                if (!$('#sourceUrlInput').val())
+                    $('#sourceUrlInput').val(url);
+            },
+            error: function() {
+                $('#fetchStatus').html('<span class="text-danger"><i class="bi bi-x-circle"></i> 擷取失敗，請手動填入</span>');
+            }
+        });
+    }
+
+    $('#btnFetchUrl').on('click', fetchUrl);
+    $('#autoFillUrl').on('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); fetchUrl(); }
+    });
+</script>

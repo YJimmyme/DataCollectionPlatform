@@ -1,0 +1,39 @@
+body {
+    font-size: 0.9rem;
+}
+
+.filter-sidebar {
+    width: 220px;
+    min-width: 220px;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    position: sticky;
+    top: 56px;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.navbar-brand {
+    font-size: 1rem;
+}
+
+dl dt {
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .filter-sidebar {
+        display: none;
+    }
+}

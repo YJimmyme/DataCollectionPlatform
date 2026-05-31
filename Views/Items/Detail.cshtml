@@ -1,0 +1,125 @@
+@model ItemDetailViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container py-4" style="max-width:800px">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h4 class="mb-0">詳情</h4>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i> 編輯
+            </a>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> 刪除
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@Model.Title</h5>
+            <div class="mb-2">
+                @foreach (var dt in Model.DataTypeNames)
+                {
+                    <span class="badge bg-primary me-1">@dt</span>
+                }
+                @foreach (var t in Model.TopicNames)
+                {
+                    <span class="badge bg-secondary me-1">@t</span>
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.Summary))
+            {
+                <p class="text-muted mt-3">@Model.Summary</p>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">來源</div>
+        <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.SourceUrl))
+            {
+                <div class="mb-2">
+                    <span class="text-muted small me-2">網址：</span>
+                    <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">
+                        @Model.SourceUrl
+                        <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                    </a>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.SourceRef))
+            {
+                <div class="mb-2">
+                    <span class="text-muted small me-2">出處：</span>
+                    <span>@Model.SourceRef</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.SourcePage))
+                    {
+                        <span class="text-muted ms-2">@Model.SourcePage</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-semibold">其他資訊</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                @if (!string.IsNullOrWhiteSpace(Model.Author))
+                {
+                    <dt class="col-sm-3 text-muted">作者 / 單位</dt>
+                    <dd class="col-sm-9">@Model.Author</dd>
+                }
+                @if (Model.PublishedAt.HasValue)
+                {
+                    <dt class="col-sm-3 text-muted">發布日期</dt>
+                    <dd class="col-sm-9">@Model.PublishedAt.Value.ToString("yyyy-MM-dd")</dd>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Tags))
+                {
+                    <dt class="col-sm-3 text-muted">標籤</dt>
+                    <dd class="col-sm-9">
+                        @foreach (var tag in Model.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        {
+                            <span class="badge bg-light text-dark border me-1">@tag</span>
+                        }
+                    </dd>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                {
+                    <dt class="col-sm-3 text-muted">備註</dt>
+                    <dd class="col-sm-9" style="white-space:pre-wrap">@Model.Notes</dd>
+                }
+                <dt class="col-sm-3 text-muted">建立時間</dt>
+                <dd class="col-sm-9">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
+                <dt class="col-sm-3 text-muted">最後更新</dt>
+                <dd class="col-sm-9 mb-0">@Model.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-triangle text-warning fs-1 d-block mb-2"></i>
+                <p>確定要刪除此資料？</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-sm">確定刪除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

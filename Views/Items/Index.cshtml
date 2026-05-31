@@ -1,0 +1,253 @@
+@model ItemIndexViewModel
+@{
+    ViewData["Title"] = "資料列表";
+
+    void RenderTopicTree(IEnumerable<Topic> topics, int level)
+    {
+        foreach (var topic in topics)
+        {
+            <div class="form-check" style="padding-left:@(level * 16 + 8)px">
+                <input class="form-check-input filter-topic" type="checkbox"
+                       name="SelectedTopicIds" value="@topic.Id"
+                       id="ft_@topic.Id"
+                       @(Model.SelectedTopicIds.Contains(topic.Id) ? "checked" : "") />
+                <label class="form-check-label small" for="ft_@topic.Id">@topic.Name</label>
+            </div>
+            if (topic.Children.Any())
+            {
+                RenderTopicTree(topic.Children, level + 1);
+            }
+        }
+    }
+}
+
+<div class="d-flex" style="min-height:calc(100vh - 56px)">
+
+    @* 左側篩選面板 *@
+    <aside class="border-end bg-light p-3 filter-sidebar">
+        <form id="filterForm" asp-action="Index" method="get">
+            <div class="mb-3">
+                <label class="form-label fw-semibold small text-uppercase text-muted">資料類別</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="dt_all"
+                           @(Model.SelectedDataTypeIds.Count == 0 ? "checked" : "") />
+                    <label class="form-check-label small" for="dt_all">全部</label>
+                </div>
+                @foreach (var dt in Model.AllDataTypes)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input filter-dt" type="checkbox"
+                               name="SelectedDataTypeIds" value="@dt.Id"
+                               id="dt_@dt.Id"
+                               @(Model.SelectedDataTypeIds.Contains(dt.Id) ? "checked" : "") />
+                        <label class="form-check-label small" for="dt_@dt.Id">@dt.Name</label>
+                    </div>
+                }
+            </div>
+
+            <hr />
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold small text-uppercase text-muted">資訊種類</label>
+                @{ RenderTopicTree(Model.TopicRoots, 0); }
+            </div>
+
+            <hr />
+
+            <div class="mb-2">
+                <label class="form-label fw-semibold small text-uppercase text-muted">發布日期</label>
+                <input type="date" class="form-control form-control-sm mb-1"
+                       name="DateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" placeholder="起" />
+                <input type="date" class="form-control form-control-sm"
+                       name="DateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" placeholder="迄" />
+            </div>
+
+            <input type="hidden" name="Query" value="@Model.Query" />
+            <input type="hidden" name="SortBy" value="@Model.SortBy" />
+            <input type="hidden" name="Page" value="1" />
+        </form>
+    </aside>
+
+    @* 主要內容 *@
+    <main class="flex-fill p-3">
+
+        @* 搜尋列 *@
+        <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
+            <div class="input-group" style="max-width:400px">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="searchInput"
+                       placeholder="搜尋標題、摘要、標籤…"
+                       value="@Model.Query" />
+            </div>
+
+            <select class="form-select form-select-sm" style="width:auto" id="sortSelect" name="SortBy">
+                <option value="created_desc" @(Model.SortBy == "created_desc" ? "selected" : "")>建立時間（新→舊）</option>
+                <option value="published_desc" @(Model.SortBy == "published_desc" ? "selected" : "")>發布日期（新→舊）</option>
+                <option value="title" @(Model.SortBy == "title" ? "selected" : "")>標題字母順序</option>
+            </select>
+
+            <div class="ms-auto d-flex gap-2">
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="@Url.Action("Export", "Items", new {
+                       Query = Model.Query,
+                       SortBy = Model.SortBy
+                   })">
+                    <i class="bi bi-download"></i> 匯出 CSV
+                </a>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="bi bi-upload"></i> 匯入 CSV
+                </button>
+            </div>
+        </div>
+
+        @* 結果數量 *@
+        <p class="text-muted small mb-2">共 @Model.TotalCount 筆</p>
+
+        @* 資料列表 *@
+        @if (!Model.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                <p>尚無資料，<a asp-action="Create">新增第一筆</a></p>
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var item in Model.Items)
+                {
+                    <a asp-action="Detail" asp-route-id="@item.Id"
+                       class="list-group-item list-group-item-action py-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-fill me-3">
+                                <h6 class="mb-1 fw-semibold">@item.Title</h6>
+                                <div class="mb-1">
+                                    @foreach (var dt in item.DataTypeNames)
+                                    {
+                                        <span class="badge bg-primary me-1">@dt</span>
+                                    }
+                                    @foreach (var t in item.TopicNames)
+                                    {
+                                        <span class="badge bg-secondary me-1">@t</span>
+                                    }
+                                    @foreach (var tag in item.TagList)
+                                    {
+                                        <span class="badge bg-light text-dark border me-1">@tag</span>
+                                    }
+                                </div>
+                                <small class="text-muted">
+                                    @if (!string.IsNullOrWhiteSpace(item.SourceUrl))
+                                    {
+                                        <i class="bi bi-link-45deg"></i>
+                                        <span>@(item.SourceUrl.Length > 60 ? item.SourceUrl[..60] + "…" : item.SourceUrl)</span>
+                                        <span class="mx-1">·</span>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.SourceRef))
+                                    {
+                                        <i class="bi bi-book"></i>
+                                        <span>@item.SourceRef</span>
+                                        <span class="mx-1">·</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.Author))
+                                    {
+                                        <span>@item.Author · </span>
+                                    }
+                                    @(item.PublishedAt?.ToString("yyyy-MM-dd") ?? item.CreatedAt.ToString("yyyy-MM-dd"))
+                                </small>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </div>
+                    </a>
+                }
+            </div>
+
+            @* 分頁 *@
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center">
+                        <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                            <a class="page-link" href="#" data-page="@(Model.Page - 1)">‹</a>
+                        </li>
+                        @for (int p = 1; p <= Model.TotalPages; p++)
+                        {
+                            <li class="page-item @(p == Model.Page ? "active" : "")">
+                                <a class="page-link" href="#" data-page="@p">@p</a>
+                            </li>
+                        }
+                        <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="#" data-page="@(Model.Page + 1)">›</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+    </main>
+</div>
+
+@* 匯入 Modal *@
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">匯入 CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Import" enctype="multipart/form-data" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <p class="text-muted small">CSV 欄位（依序）：Title, Summary, SourceUrl, SourceRef, SourcePage, Author, PublishedAt, Tags, Notes, DataTypes（分號分隔）, Topics（分號分隔）</p>
+                    <input type="file" class="form-control" name="file" accept=".csv" required />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">匯入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // 篩選觸發
+    function submitFilter() {
+        var q = $('#searchInput').val();
+        var sort = $('#sortSelect').val();
+        $('input[name=Query]').val(q);
+        $('input[name=SortBy]').val(sort);
+        $('input[name=Page]').val(1);
+        $('#filterForm').submit();
+    }
+
+    $('#searchInput').on('keydown', function(e) {
+        if (e.key === 'Enter') submitFilter();
+    });
+
+    $('#sortSelect').on('change', submitFilter);
+
+    // 類別 checkbox 聯動
+    $('.filter-dt, .filter-topic').on('change', function() {
+        $('#dt_all').prop('checked', $('.filter-dt:checked').length === 0);
+        submitFilter();
+    });
+
+    $('#dt_all').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('.filter-dt').prop('checked', false);
+            submitFilter();
+        }
+    });
+
+    // 日期篩選
+    $('input[name=DateFrom], input[name=DateTo]').on('change', submitFilter);
+
+    // 分頁
+    $('.page-link[data-page]').on('click', function(e) {
+        e.preventDefault();
+        $('input[name=Page]').val($(this).data('page'));
+        $('input[name=Query]').val($('#searchInput').val());
+        $('#filterForm').submit();
+    });
+</script>
+}
