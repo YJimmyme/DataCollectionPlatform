@@ -10,6 +10,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Topic> Topics => Set<Topic>();
     public DbSet<ItemDataType> ItemDataTypes => Set<ItemDataType>();
     public DbSet<ItemTopic> ItemTopics => Set<ItemTopic>();
+    public DbSet<PushSchedule> PushSchedules => Set<PushSchedule>();
+    public DbSet<PushLog> PushLogs => Set<PushLog>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -21,5 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(t => t.Children)
             .HasForeignKey(t => t.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        mb.Entity<AppSetting>().HasKey(s => s.Key);
     }
 }

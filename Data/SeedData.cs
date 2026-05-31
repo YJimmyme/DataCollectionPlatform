@@ -68,5 +68,21 @@ public static class SeedData
             if (parent == null)
                 savedRoots[name] = t;
         }
+
+        // 推送平台預設設定
+        if (!db.AppSettings.Any())
+        {
+            db.AppSettings.AddRange(
+                new AppSetting { Key = "notion.api_token",    Value = "" },
+                new AppSetting { Key = "notion.database_id",  Value = "" },
+                new AppSetting { Key = "email.smtp_host",     Value = "smtp.gmail.com" },
+                new AppSetting { Key = "email.smtp_port",     Value = "587" },
+                new AppSetting { Key = "email.username",      Value = "" },
+                new AppSetting { Key = "email.password",      Value = "" },
+                new AppSetting { Key = "email.from_address",  Value = "" },
+                new AppSetting { Key = "email.to_addresses",  Value = "" }
+            );
+            db.SaveChanges();
+        }
     }
 }

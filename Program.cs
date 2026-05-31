@@ -12,6 +12,12 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddHttpClient<IUrlFetchService, UrlFetchService>();
 builder.Services.AddScoped<IImportExportService, ImportExportService>();
 
+builder.Services.AddHttpClient("notion");
+builder.Services.AddScoped<INotionService, NotionService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IPushExecutor, PushExecutor>();
+builder.Services.AddHostedService<ScheduledPushBackgroundService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

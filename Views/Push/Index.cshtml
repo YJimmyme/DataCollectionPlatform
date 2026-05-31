@@ -1,0 +1,158 @@
+@model List<PushSchedule>
+@{
+    ViewData["Title"] = "推送排程";
+
+    string PlatformBadge(string p) => p switch
+    {
+        "notion" => "<span class='badge bg-dark'>Notion</span>",
+        "email"  => "<span class='badge bg-info text-dark'>Email</span>",
+        _        => $"<span class='badge bg-secondary'>{p}</span>"
+    };
+
+    string IntervalLabel(PushSchedule s) => s.IntervalType switch
+    {
+        "manual"  => "手動",
+        "daily"   => $"每天 {s.RunAt:hh\\:mm}",
+        "weekly"  => $"每週{new[] {"日","一","二","三","四","五","六"}[s.DayOfWeek ?? 0]} {s.RunAt:hh\\:mm}",
+        "monthly" => $"每月 {s.DayOfMonth} 號 {s.RunAt:hh\\:mm}",
+        _         => s.IntervalType
+    };
+}
+
+<div class="container-fluid py-3 px-4">
+    <div class="d-flex align-items-center mb-4">
+        <h4 class="mb-0"><i class="bi bi-send me-2"></i>推送排程</h4>
+        <a asp-action="Create" class="btn btn-primary btn-sm ms-auto">
+            <i class="bi bi-plus-lg"></i> 新增排程
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-send fs-1 d-block mb-2"></i>
+            <p>尚未建立任何推送排程，<a asp-action="Create">立即新增</a></p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>排程名稱</th>
+                        <th>平台</th>
+                        <th>執行頻率</th>
+                        <th>推送範圍</th>
+                        <th>狀態</th>
+                        <th>上次執行</th>
+                        <th>上次結果</th>
+                        <th style="width:200px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        var lastLog = s.Logs.OrderByDescending(l => l.RunAt).FirstOrDefault();
+                        <tr class="@(s.IsActive ? "" : "text-muted")">
+                            <td class="fw-semibold">@s.Name</td>
+                            <td>@Html.Raw(PlatformBadge(s.Platform))</td>
+                            <td>@IntervalLabel(s)</td>
+                            <td>
+                                <small class="text-muted">
+                                    @(s.NewItemsOnly ? "僅新資料" : "全部符合")
+                                </small>
+                            </td>
+                            <td>
+                                @if (s.IsActive)
+                                {
+                                    <span class="badge bg-success">啟用</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">停用</span>
+                                }
+                            </td>
+                            <td>
+                                <small>@(s.LastRunAt?.ToString("MM-dd HH:mm") ?? "—")</small>
+                            </td>
+                            <td>
+                                @if (lastLog != null)
+                                {
+                                    <span class="badge @(lastLog.Status == "success" ? "bg-success" : "bg-danger")">
+                                        @(lastLog.Status == "success" ? $"✓ {lastLog.ItemCount} 筆" : "✗ 失敗")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <form asp-action="Run" asp-route-id="@s.Id" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                title="立即推送">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                    </form>
+                                    <a asp-action="Edit" asp-route-id="@s.Id"
+                                       class="btn btn-sm btn-outline-secondary" title="編輯">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Log" asp-route-id="@s.Id"
+                                       class="btn btn-sm btn-outline-secondary" title="執行記錄">
+                                        <i class="bi bi-clock-history"></i>
+                                    </a>
+                                    <form asp-action="Toggle" asp-route-id="@s.Id" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                title="@(s.IsActive ? "停用" : "啟用")">
+                                            <i class="bi @(s.IsActive ? "bi-pause" : "bi-play")"></i>
+                                        </button>
+                                    </form>
+                                    <button class="btn btn-sm btn-outline-danger" title="刪除"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#delModal"
+                                            data-id="@s.Id" data-name="@s.Name">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="delModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-triangle text-warning fs-1 d-block mb-2"></i>
+                <p>確定刪除排程「<strong id="delName"></strong>」？</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <form id="delForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-sm">確定刪除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $('#delModal').on('show.bs.modal', function(e) {
+        var id   = $(e.relatedTarget).data('id');
+        var name = $(e.relatedTarget).data('name');
+        $('#delName').text(name);
+        $('#delForm').attr('action', '/Push/Delete/' + id);
+    });
+</script>
+}

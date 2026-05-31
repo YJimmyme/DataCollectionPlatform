@@ -11,14 +11,47 @@ public class SettingsController(AppDbContext db) : Controller
     public async Task<IActionResult> Index(string tab = "datatypes")
     {
         var allTopics = await db.Topics.OrderBy(t => t.Name).ToListAsync();
+        var pushSettings = await db.AppSettings
+            .Where(s => s.Key.StartsWith("notion.") || s.Key.StartsWith("email."))
+            .ToDictionaryAsync(s => s.Key, s => s.Value ?? "");
+
         var vm = new SettingsViewModel
         {
-            ActiveTab = tab,
-            DataTypes = await db.DataTypes.OrderBy(d => d.Name).ToListAsync(),
+            ActiveTab    = tab,
+            DataTypes    = await db.DataTypes.OrderBy(d => d.Name).ToListAsync(),
             ActiveDataTypes = await db.DataTypes.Where(d => d.IsActive).OrderBy(d => d.Name).ToListAsync(),
-            Topics = FlattenTopics(allTopics, null, 0)
+            Topics       = FlattenTopics(allTopics, null, 0),
+            PushSettings = pushSettings
         };
         return View(vm);
+    }
+
+    // ── 推送平台設定 ──────────────────────────────────────────────────────────
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SavePushSettings(IFormCollection form)
+    {
+        var keys = new[]
+        {
+            "notion.api_token", "notion.database_id",
+            "email.smtp_host", "email.smtp_port",
+            "email.username", "email.password",
+            "email.from_address", "email.to_addresses"
+        };
+
+        foreach (var key in keys)
+        {
+            var value = form[key].ToString();
+            var setting = await db.AppSettings.FindAsync(key);
+            if (setting == null)
+                db.AppSettings.Add(new AppSetting { Key = key, Value = value });
+            else
+                setting.Value = value;
+        }
+
+        await db.SaveChangesAsync();
+        TempData["Success"] = "推送平台設定已儲存";
+        return RedirectToAction(nameof(Index), new { tab = "push" });
     }
 
     // ── DataType ──────────────────────────────────────────────────────────────

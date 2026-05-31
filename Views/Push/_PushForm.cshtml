@@ -1,0 +1,132 @@
+@model PushFormViewModel
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">基本設定</div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" placeholder="例：每週機器人論文摘要" />
+            <span asp-validation-for="Name" class="text-danger small"></span>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Platform" class="form-label"></label>
+                <select asp-for="Platform" class="form-select" id="platformSelect">
+                    <option value="email">Email（SMTP）</option>
+                    <option value="notion">Notion</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label asp-for="IsActive" class="form-label d-block">&nbsp;</label>
+                <div class="form-check form-switch mt-1">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" />
+                    <label asp-for="IsActive" class="form-check-label">啟用此排程</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">執行頻率</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="IntervalType" class="form-label"></label>
+                <select asp-for="IntervalType" class="form-select" id="intervalSelect">
+                    <option value="manual">手動（不自動執行）</option>
+                    <option value="daily">每天</option>
+                    <option value="weekly">每週</option>
+                    <option value="monthly">每月</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3" id="runAtGroup">
+                <label asp-for="RunAtTime" class="form-label">執行時間</label>
+                <input asp-for="RunAtTime" class="form-control" type="time" />
+            </div>
+
+            <div class="col-md-3 mb-3" id="dowGroup" style="display:none">
+                <label asp-for="DayOfWeek" class="form-label">星期幾</label>
+                <select asp-for="DayOfWeek" class="form-select">
+                    <option value="1">星期一</option>
+                    <option value="2">星期二</option>
+                    <option value="3">星期三</option>
+                    <option value="4">星期四</option>
+                    <option value="5">星期五</option>
+                    <option value="6">星期六</option>
+                    <option value="0">星期日</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 mb-3" id="domGroup" style="display:none">
+                <label asp-for="DayOfMonth" class="form-label">每月幾號</label>
+                <input asp-for="DayOfMonth" class="form-control" type="number" min="1" max="28" />
+                <div class="form-text">建議 1–28，避免月底少天問題</div>
+            </div>
+        </div>
+
+        <div class="form-check">
+            <input asp-for="NewItemsOnly" class="form-check-input" type="checkbox" />
+            <label asp-for="NewItemsOnly" class="form-check-label"></label>
+            <div class="form-text">勾選後每次只推送「上次執行後新增」的資料，避免重複。</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">篩選條件（留空 = 不限制）</div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label asp-for="Query" class="form-label"></label>
+            <input asp-for="Query" class="form-control" placeholder="關鍵字（比對標題、摘要）" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold small">資料類別</label>
+            <div class="d-flex flex-wrap gap-3">
+                @foreach (var dt in Model.AllDataTypes)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               name="SelectedDataTypeIds" value="@dt.Id" id="pdt_@dt.Id"
+                               @(Model.SelectedDataTypeIds.Contains(dt.Id) ? "checked" : "") />
+                        <label class="form-check-label" for="pdt_@dt.Id">@dt.Name</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label fw-semibold small">資訊種類</label>
+            <div class="row">
+                @foreach (var node in Model.TopicTree)
+                {
+                    <div class="col-md-4">
+                        <div class="form-check" style="padding-left:@(node.Level * 16 + 24)px">
+                            <input class="form-check-input" type="checkbox"
+                                   name="SelectedTopicIds" value="@node.Id" id="pt_@node.Id"
+                                   @(Model.SelectedTopicIds.Contains(node.Id) ? "checked" : "") />
+                            <label class="form-check-label @(node.Level == 0 ? "fw-semibold" : "")"
+                                   for="pt_@node.Id">@node.Name</label>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function updateScheduleVisibility() {
+        var interval = $('#intervalSelect').val();
+        $('#runAtGroup').toggle(interval !== 'manual');
+        $('#dowGroup').toggle(interval === 'weekly');
+        $('#domGroup').toggle(interval === 'monthly');
+    }
+    $('#intervalSelect').on('change', updateScheduleVisibility);
+    updateScheduleVisibility();
+</script>
+}

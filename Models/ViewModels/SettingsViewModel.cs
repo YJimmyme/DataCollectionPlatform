@@ -8,6 +8,7 @@ public class SettingsViewModel
     public List<TopicFlatRow> Topics { get; set; } = [];
     public List<DataType> ActiveDataTypes { get; set; } = [];
     public string ActiveTab { get; set; } = "datatypes";
+    public Dictionary<string, string> PushSettings { get; set; } = [];
 }
 
 public class TopicFlatRow

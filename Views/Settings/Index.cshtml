@@ -12,10 +12,105 @@
                href="@Url.Action("Index", new { tab = "datatypes" })">資料類別</a>
         </li>
         <li class="nav-item">
+            <a class="nav-link @(Model.ActiveTab == "push" ? "active" : "")"
+               href="@Url.Action("Index", new { tab = "push" })">推送平台設定</a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "topics" ? "active" : "")"
                href="@Url.Action("Index", new { tab = "topics" })">資訊種類</a>
         </li>
     </ul>
+
+    @if (Model.ActiveTab == "push")
+    {
+        string S(string key) => Model.PushSettings.GetValueOrDefault(key, "");
+
+        <form asp-action="SavePushSettings" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-journal-text me-1"></i> Notion 設定
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <strong>設定步驟：</strong>
+                        1. 前往 <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> 建立 Integration，複製 Token。
+                        2. 在 Notion 建立 Database，共用給此 Integration。
+                        3. 確保 Database 有以下欄位：<code>Name</code>（title）、<code>Source</code>（url）、
+                           <code>DataTypes</code>/<code>Topics</code>/<code>Tags</code>（multi_select）、
+                           <code>Author</code>/<code>SourceRef</code>（text）、<code>Published</code>（date）。
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Token（Internal Integration Token）</label>
+                        <input type="password" class="form-control" name="notion.api_token"
+                               value="@S("notion.api_token")" placeholder="secret_xxx…" autocomplete="off" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Database ID</label>
+                        <input type="text" class="form-control" name="notion.database_id"
+                               value="@S("notion.database_id")"
+                               placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                        <div class="form-text">從 Notion Database 頁面 URL 中取得，32 位英數字串。</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-envelope me-1"></i> Email（SMTP）設定
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <strong>Gmail 使用方式：</strong>
+                        啟用兩步驟驗證 →
+                        前往「<a href="https://myaccount.google.com/apppasswords" target="_blank">應用程式密碼</a>」
+                        產生 16 碼密碼 → 填入下方「密碼」欄位（不是 Gmail 登入密碼）。
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">SMTP 主機</label>
+                            <input type="text" class="form-control" name="email.smtp_host"
+                                   value="@S("email.smtp_host")" placeholder="smtp.gmail.com" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">SMTP 連接埠</label>
+                            <input type="number" class="form-control" name="email.smtp_port"
+                                   value="@S("email.smtp_port")" placeholder="587" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">帳號（Gmail 地址）</label>
+                            <input type="email" class="form-control" name="email.username"
+                                   value="@S("email.username")" placeholder="you@gmail.com" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">密碼（應用程式密碼）</label>
+                            <input type="password" class="form-control" name="email.password"
+                                   value="@S("email.password")" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">寄件人地址（選填，預設同帳號）</label>
+                            <input type="email" class="form-control" name="email.from_address"
+                                   value="@S("email.from_address")" />
+                        </div>
+                        <div class="col-md-6 mb-0">
+                            <label class="form-label">收件人（多個用逗號分隔）</label>
+                            <input type="text" class="form-control" name="email.to_addresses"
+                                   value="@S("email.to_addresses")" placeholder="a@example.com, b@example.com" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>儲存設定
+            </button>
+        </form>
+    }
 
     @if (Model.ActiveTab == "datatypes")
     {
